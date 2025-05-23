@@ -171,6 +171,19 @@ public class ResponseTools
     }
 
     /// <summary>
+    /// Adds the tools collection to an existing <see cref="ResponseCreationOptions"/> configured with the tools contained in this instance..
+    /// </summary>
+    /// <param name="existing">The existing options</param>
+    /// <param name="overwrite">True to override the existing tools in the options</param>
+    public void AddToResponseCreationOptions(ResponseCreationOptions existing, bool overwrite = true)
+    {
+        if (existing == null) throw new ArgumentNullException(nameof(existing));
+        if (overwrite) existing.Tools.Clear();
+        foreach (var tool in _tools)
+            existing.Tools.Add(tool);
+    }
+
+    /// <summary>
     /// Converts the tools collection to <see cref="ResponseCreationOptions">, filtered by relevance to the given prompt.
     /// </summary>
     /// <param name="prompt">The prompt to find relevant tools for.</param>
