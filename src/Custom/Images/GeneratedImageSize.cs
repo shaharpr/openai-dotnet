@@ -13,7 +13,7 @@ public readonly partial struct GeneratedImageSize : IEquatable<GeneratedImageSiz
 {
     /// <summary> Initializes a new instance of <see cref="GeneratedImageSize"/>. </summary>
     /// <exception cref="ArgumentNullException"> <paramref name="value"/> is null. </exception>
-    internal GeneratedImageSize(string value)
+    public GeneratedImageSize(string value)
     {
         _value = value ?? throw new ArgumentNullException(nameof(value));
     }
