@@ -18,8 +18,8 @@ namespace OpenAI.Chat;
 /// <summary> The service client for OpenAI chat operations. </summary>
 [CodeGenType("Chat")]
 [CodeGenSuppress("ChatClient", typeof(ClientPipeline), typeof(Uri))]
-[CodeGenSuppress("CreateChatCompletion", typeof(ChatCompletionOptions), typeof(CancellationToken))]
-[CodeGenSuppress("CreateChatCompletionAsync", typeof(ChatCompletionOptions), typeof(CancellationToken))]
+[CodeGenSuppress("CompleteChat", typeof(ChatCompletionOptions), typeof(CancellationToken))]
+[CodeGenSuppress("CompleteChatAsync", typeof(ChatCompletionOptions), typeof(CancellationToken))]
 [CodeGenSuppress("GetChatCompletionMessages", typeof(string), typeof(string), typeof(int?), typeof(OpenAI.VectorStores.VectorStoreCollectionOrder?), typeof(CancellationToken))]
 [CodeGenSuppress("GetChatCompletionMessagesAsync", typeof(string), typeof(string), typeof(int?), typeof(OpenAI.VectorStores.VectorStoreCollectionOrder?), typeof(CancellationToken))]
 [CodeGenSuppress("GetChatCompletions", typeof(string), typeof(int?), typeof(OpenAI.VectorStores.VectorStoreCollectionOrder?), typeof(IDictionary<string, string>), typeof(string), typeof(CancellationToken))]
@@ -101,6 +101,11 @@ public partial class ChatClient
         _endpoint = OpenAIClient.GetEndpoint(options);
         _telemetry = new OpenTelemetrySource(model, _endpoint);
     }
+
+    /// <summary>
+    /// Gets the name of the model used in requests sent to the service.
+    /// </summary>
+    public string Model => _model;
 
     /// <summary> Generates a completion for the given chat. </summary>
     /// <param name="messages"> The messages comprising the chat so far. </param>

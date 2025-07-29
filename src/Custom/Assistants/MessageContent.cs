@@ -4,7 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace OpenAI.Assistants;
 
-[Experimental("OPENAI001")]
 [CodeGenType("MessageContent")]
 public partial class MessageContent
 {
@@ -20,7 +19,7 @@ public partial class MessageContent
             => new InternalMessageContentImageFileObject(
                 imageFile: new(
                     fileId: imageFileId,
-                    detail: detail?.ToString(),
+                    detail: detail?.ToSerialString(),
                     additionalBinaryDataProperties: null));
 
     /// <summary>
@@ -34,7 +33,7 @@ public partial class MessageContent
         => new InternalMessageContentImageUrlObject(
             imageUrl: new(
                 url: imageUri,
-                detail: detail?.ToString(),
+                detail: detail?.ToSerialString(),
                 additionalBinaryDataProperties: null));
 
     /// <summary>

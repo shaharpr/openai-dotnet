@@ -17,8 +17,8 @@ namespace OpenAI.Embeddings;
 /// <summary> The service client for OpenAI embedding operations. </summary>
 [CodeGenType("Embeddings")]
 [CodeGenSuppress("EmbeddingClient", typeof(ClientPipeline), typeof(Uri))]
-[CodeGenSuppress("CreateEmbeddingAsync", typeof(EmbeddingGenerationOptions), typeof(CancellationToken))]
-[CodeGenSuppress("CreateEmbedding", typeof(EmbeddingGenerationOptions), typeof(CancellationToken))]
+[CodeGenSuppress("GenerateEmbeddingsAsync", typeof(EmbeddingGenerationOptions), typeof(CancellationToken))]
+[CodeGenSuppress("GenerateEmbeddings", typeof(EmbeddingGenerationOptions), typeof(CancellationToken))]
 public partial class EmbeddingClient
 {
     private readonly string _model;
@@ -88,6 +88,11 @@ public partial class EmbeddingClient
         Pipeline = pipeline;
         _endpoint = OpenAIClient.GetEndpoint(options);
     }
+
+    /// <summary>
+    /// Gets the name of the model used in requests sent to the service.
+    /// </summary>
+    public string Model => _model;
 
     // CUSTOM: Added to simplify generating a single embedding from a string input.
     /// <summary> Generates an embedding representing the text input. </summary>

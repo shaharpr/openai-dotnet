@@ -15,8 +15,8 @@ namespace OpenAI.Images;
 /// <summary> The service client for OpenAI image operations. </summary>
 [CodeGenType("Images")]
 [CodeGenSuppress("ImageClient", typeof(ClientPipeline), typeof(Uri))]
-[CodeGenSuppress("CreateImageAsync", typeof(ImageGenerationOptions), typeof(CancellationToken))]
-[CodeGenSuppress("CreateImage", typeof(ImageGenerationOptions), typeof(CancellationToken))]
+[CodeGenSuppress("GenerateImagesAsync", typeof(ImageGenerationOptions), typeof(CancellationToken))]
+[CodeGenSuppress("GenerateImages", typeof(ImageGenerationOptions), typeof(CancellationToken))]
 public partial class ImageClient
 {
     private readonly string _model;
@@ -86,6 +86,11 @@ public partial class ImageClient
         Pipeline = pipeline;
         _endpoint = OpenAIClient.GetEndpoint(options);
     }
+    
+    /// <summary>
+    /// Gets the name of the model used in requests sent to the service.
+    /// </summary>
+    public string Model => _model;
 
     #region GenerateImages
 

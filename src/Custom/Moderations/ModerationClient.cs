@@ -17,8 +17,8 @@ namespace OpenAI.Moderations;
 /// <summary> The service client for OpenAI moderation operations. </summary>
 [CodeGenType("Moderations")]
 [CodeGenSuppress("ModerationClient", typeof(ClientPipeline), typeof(Uri))]
-[CodeGenSuppress("CreateModerationAsync", typeof(ModerationOptions), typeof(CancellationToken))]
-[CodeGenSuppress("CreateModeration", typeof(ModerationOptions), typeof(CancellationToken))]
+[CodeGenSuppress("ClassifyTextAsync", typeof(ModerationOptions), typeof(CancellationToken))]
+[CodeGenSuppress("ClassifyText", typeof(ModerationOptions), typeof(CancellationToken))]
 public partial class ModerationClient
 {
     private readonly string _model;
@@ -88,6 +88,11 @@ public partial class ModerationClient
         Pipeline = pipeline;
         _endpoint = OpenAIClient.GetEndpoint(options);
     }
+
+    /// <summary>
+    /// Gets the name of the model used in requests sent to the service.
+    /// </summary>
+    public string Model => _model;
 
     /// <summary> Classifies if the text input is potentially harmful across several categories. </summary>
     /// <param name="input"> The text input to classify. </param>
