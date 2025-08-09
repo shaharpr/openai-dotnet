@@ -3,6 +3,10 @@ namespace OpenAI {
         protected OpenAIClient();
         public OpenAIClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public OpenAIClient(ApiKeyCredential credential);
+        [Experimental("OPENAI001")]
+        public OpenAIClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        [Experimental("OPENAI001")]
+        public OpenAIClient(AuthenticationPolicy authenticationPolicy);
         protected internal OpenAIClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public OpenAIClient(string apiKey);
         public ClientPipeline Pipeline { get; }
@@ -69,6 +73,8 @@ namespace OpenAI.Assistants {
         protected AssistantClient();
         public AssistantClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public AssistantClient(ApiKeyCredential credential);
+        public AssistantClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        public AssistantClient(AuthenticationPolicy authenticationPolicy);
         protected internal AssistantClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public AssistantClient(string apiKey);
         public ClientPipeline Pipeline { get; }
@@ -1055,7 +1061,13 @@ namespace OpenAI.Audio {
         protected internal AudioClient(ClientPipeline pipeline, string model, OpenAIClientOptions options);
         public AudioClient(string model, ApiKeyCredential credential, OpenAIClientOptions options);
         public AudioClient(string model, ApiKeyCredential credential);
+        [Experimental("OPENAI001")]
+        public AudioClient(string model, AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        [Experimental("OPENAI001")]
+        public AudioClient(string model, AuthenticationPolicy authenticationPolicy);
         public AudioClient(string model, string apiKey);
+        [Experimental("OPENAI001")]
+        public string Model { get; }
         public ClientPipeline Pipeline { get; }
         public virtual ClientResult GenerateSpeech(BinaryContent content, RequestOptions options = null);
         public virtual ClientResult<BinaryData> GenerateSpeech(string text, GeneratedSpeechVoice voice, SpeechGenerationOptions options = null, CancellationToken cancellationToken = default);
@@ -1334,6 +1346,8 @@ namespace OpenAI.Batch {
         protected BatchClient();
         public BatchClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public BatchClient(ApiKeyCredential credential);
+        public BatchClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        public BatchClient(AuthenticationPolicy authenticationPolicy);
         protected internal BatchClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public BatchClient(string apiKey);
         public ClientPipeline Pipeline { get; }
@@ -1402,7 +1416,13 @@ namespace OpenAI.Chat {
         protected internal ChatClient(ClientPipeline pipeline, string model, OpenAIClientOptions options);
         public ChatClient(string model, ApiKeyCredential credential, OpenAIClientOptions options);
         public ChatClient(string model, ApiKeyCredential credential);
+        [Experimental("OPENAI001")]
+        public ChatClient(string model, AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        [Experimental("OPENAI001")]
+        public ChatClient(string model, AuthenticationPolicy authenticationPolicy);
         public ChatClient(string model, string apiKey);
+        [Experimental("OPENAI001")]
+        public string Model { get; }
         public ClientPipeline Pipeline { get; }
         public virtual ClientResult<ChatCompletion> CompleteChat(params ChatMessage[] messages);
         public virtual ClientResult CompleteChat(BinaryContent content, RequestOptions options = null);
@@ -1430,6 +1450,30 @@ namespace OpenAI.Chat {
         public virtual Task<ClientResult> GetChatCompletionAsync(string completionId, RequestOptions options);
         [Experimental("OPENAI001")]
         public virtual Task<ClientResult<ChatCompletion>> GetChatCompletionAsync(string completionId, CancellationToken cancellationToken = default);
+        [Experimental("OPENAI001")]
+        public virtual CollectionResult<ChatCompletionMessageListDatum> GetChatCompletionMessages(string completionId, ChatCompletionCollectionOptions options = null, CancellationToken cancellationToken = default);
+        [Experimental("OPENAI001")]
+        public virtual CollectionResult GetChatCompletionMessages(string completionId, string after, int? limit, string order, RequestOptions options);
+        [Experimental("OPENAI001")]
+        public virtual AsyncCollectionResult<ChatCompletionMessageListDatum> GetChatCompletionMessagesAsync(string completionId, ChatCompletionMessageCollectionOptions options = null, CancellationToken cancellationToken = default);
+        [Experimental("OPENAI001")]
+        public virtual AsyncCollectionResult GetChatCompletionMessagesAsync(string completionId, string after, int? limit, string order, RequestOptions options);
+        [Experimental("OPENAI001")]
+        public virtual CollectionResult<ChatCompletion> GetChatCompletions(ChatCompletionCollectionOptions options = null, CancellationToken cancellationToken = default);
+        [Experimental("OPENAI001")]
+        public virtual CollectionResult GetChatCompletions(string after, int? limit, string order, IDictionary<string, string> metadata, string model, RequestOptions options);
+        [Experimental("OPENAI001")]
+        public virtual AsyncCollectionResult<ChatCompletion> GetChatCompletionsAsync(ChatCompletionCollectionOptions options = null, CancellationToken cancellationToken = default);
+        [Experimental("OPENAI001")]
+        public virtual AsyncCollectionResult GetChatCompletionsAsync(string after, int? limit, string order, IDictionary<string, string> metadata, string model, RequestOptions options);
+        [Experimental("OPENAI001")]
+        public virtual ClientResult UpdateChatCompletion(string completionId, BinaryContent content, RequestOptions options = null);
+        [Experimental("OPENAI001")]
+        public virtual ClientResult<ChatCompletion> UpdateChatCompletion(string completionId, IDictionary<string, string> metadata, CancellationToken cancellationToken = default);
+        [Experimental("OPENAI001")]
+        public virtual Task<ClientResult> UpdateChatCompletionAsync(string completionId, BinaryContent content, RequestOptions options = null);
+        [Experimental("OPENAI001")]
+        public virtual Task<ClientResult<ChatCompletion>> UpdateChatCompletionAsync(string completionId, IDictionary<string, string> metadata, CancellationToken cancellationToken = default);
     }
     public class ChatCompletion : IJsonModel<ChatCompletion>, IPersistableModel<ChatCompletion> {
         [Experimental("OPENAI001")]
@@ -1460,12 +1504,77 @@ namespace OpenAI.Chat {
         protected virtual BinaryData PersistableModelWriteCore(ModelReaderWriterOptions options);
     }
     [Experimental("OPENAI001")]
+    public class ChatCompletionCollectionOptions : IJsonModel<ChatCompletionCollectionOptions>, IPersistableModel<ChatCompletionCollectionOptions> {
+        public string AfterId { get; set; }
+        public IDictionary<string, string> Metadata { get; }
+        public string Model { get; set; }
+        public ChatCompletionCollectionOrder? Order { get; set; }
+        public int? PageSizeLimit { get; set; }
+        protected virtual ChatCompletionCollectionOptions JsonModelCreateCore(ref Utf8JsonReader reader, ModelReaderWriterOptions options);
+        protected virtual void JsonModelWriteCore(Utf8JsonWriter writer, ModelReaderWriterOptions options);
+        protected virtual ChatCompletionCollectionOptions PersistableModelCreateCore(BinaryData data, ModelReaderWriterOptions options);
+        protected virtual BinaryData PersistableModelWriteCore(ModelReaderWriterOptions options);
+    }
+    [Experimental("OPENAI001")]
+    public readonly partial struct ChatCompletionCollectionOrder : IEquatable<ChatCompletionCollectionOrder> {
+        public ChatCompletionCollectionOrder(string value);
+        public static ChatCompletionCollectionOrder Ascending { get; }
+        public static ChatCompletionCollectionOrder Descending { get; }
+        public readonly bool Equals(ChatCompletionCollectionOrder other);
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public override readonly bool Equals(object obj);
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public override readonly int GetHashCode();
+        public static bool operator ==(ChatCompletionCollectionOrder left, ChatCompletionCollectionOrder right);
+        public static implicit operator ChatCompletionCollectionOrder(string value);
+        public static bool operator !=(ChatCompletionCollectionOrder left, ChatCompletionCollectionOrder right);
+        public override readonly string ToString();
+    }
+    [Experimental("OPENAI001")]
     public class ChatCompletionDeletionResult : IJsonModel<ChatCompletionDeletionResult>, IPersistableModel<ChatCompletionDeletionResult> {
         public string ChatCompletionId { get; }
         public bool Deleted { get; }
         protected virtual ChatCompletionDeletionResult JsonModelCreateCore(ref Utf8JsonReader reader, ModelReaderWriterOptions options);
         protected virtual void JsonModelWriteCore(Utf8JsonWriter writer, ModelReaderWriterOptions options);
         protected virtual ChatCompletionDeletionResult PersistableModelCreateCore(BinaryData data, ModelReaderWriterOptions options);
+        protected virtual BinaryData PersistableModelWriteCore(ModelReaderWriterOptions options);
+    }
+    [Experimental("OPENAI001")]
+    public class ChatCompletionMessageCollectionOptions : IJsonModel<ChatCompletionMessageCollectionOptions>, IPersistableModel<ChatCompletionMessageCollectionOptions> {
+        public string AfterId { get; set; }
+        public ChatCompletionMessageCollectionOrder? Order { get; set; }
+        public int? PageSizeLimit { get; set; }
+        protected virtual ChatCompletionMessageCollectionOptions JsonModelCreateCore(ref Utf8JsonReader reader, ModelReaderWriterOptions options);
+        protected virtual void JsonModelWriteCore(Utf8JsonWriter writer, ModelReaderWriterOptions options);
+        protected virtual ChatCompletionMessageCollectionOptions PersistableModelCreateCore(BinaryData data, ModelReaderWriterOptions options);
+        protected virtual BinaryData PersistableModelWriteCore(ModelReaderWriterOptions options);
+    }
+    [Experimental("OPENAI001")]
+    public readonly partial struct ChatCompletionMessageCollectionOrder : IEquatable<ChatCompletionMessageCollectionOrder> {
+        public ChatCompletionMessageCollectionOrder(string value);
+        public static ChatCompletionMessageCollectionOrder Ascending { get; }
+        public static ChatCompletionMessageCollectionOrder Descending { get; }
+        public readonly bool Equals(ChatCompletionMessageCollectionOrder other);
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public override readonly bool Equals(object obj);
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public override readonly int GetHashCode();
+        public static bool operator ==(ChatCompletionMessageCollectionOrder left, ChatCompletionMessageCollectionOrder right);
+        public static implicit operator ChatCompletionMessageCollectionOrder(string value);
+        public static bool operator !=(ChatCompletionMessageCollectionOrder left, ChatCompletionMessageCollectionOrder right);
+        public override readonly string ToString();
+    }
+    [Experimental("OPENAI001")]
+    public class ChatCompletionMessageListDatum : IJsonModel<ChatCompletionMessageListDatum>, IPersistableModel<ChatCompletionMessageListDatum> {
+        public IReadOnlyList<ChatMessageAnnotation> Annotations { get; }
+        public string Content { get; }
+        public string Id { get; }
+        public ChatOutputAudio OutputAudio { get; }
+        public string Refusal { get; }
+        public IReadOnlyList<ChatToolCall> ToolCalls { get; }
+        protected virtual ChatCompletionMessageListDatum JsonModelCreateCore(ref Utf8JsonReader reader, ModelReaderWriterOptions options);
+        protected virtual void JsonModelWriteCore(Utf8JsonWriter writer, ModelReaderWriterOptions options);
+        protected virtual ChatCompletionMessageListDatum PersistableModelCreateCore(BinaryData data, ModelReaderWriterOptions options);
         protected virtual BinaryData PersistableModelWriteCore(ModelReaderWriterOptions options);
     }
     public class ChatCompletionOptions : IJsonModel<ChatCompletionOptions>, IPersistableModel<ChatCompletionOptions> {
@@ -2104,6 +2213,8 @@ namespace OpenAI.Containers {
         protected ContainerClient();
         public ContainerClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public ContainerClient(ApiKeyCredential credential);
+        public ContainerClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        public ContainerClient(AuthenticationPolicy authenticationPolicy);
         protected internal ContainerClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public ContainerClient(string apiKey);
         public ClientPipeline Pipeline { get; }
@@ -2241,7 +2352,13 @@ namespace OpenAI.Embeddings {
         protected internal EmbeddingClient(ClientPipeline pipeline, string model, OpenAIClientOptions options);
         public EmbeddingClient(string model, ApiKeyCredential credential, OpenAIClientOptions options);
         public EmbeddingClient(string model, ApiKeyCredential credential);
+        [Experimental("OPENAI001")]
+        public EmbeddingClient(string model, AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        [Experimental("OPENAI001")]
+        public EmbeddingClient(string model, AuthenticationPolicy authenticationPolicy);
         public EmbeddingClient(string model, string apiKey);
+        [Experimental("OPENAI001")]
+        public string Model { get; }
         public ClientPipeline Pipeline { get; }
         public virtual ClientResult<OpenAIEmbedding> GenerateEmbedding(string input, EmbeddingGenerationOptions options = null, CancellationToken cancellationToken = default);
         public virtual Task<ClientResult<OpenAIEmbedding>> GenerateEmbeddingAsync(string input, EmbeddingGenerationOptions options = null, CancellationToken cancellationToken = default);
@@ -2312,6 +2429,8 @@ namespace OpenAI.Evals {
         protected EvaluationClient();
         public EvaluationClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public EvaluationClient(ApiKeyCredential credential);
+        public EvaluationClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        public EvaluationClient(AuthenticationPolicy authenticationPolicy);
         protected internal EvaluationClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public EvaluationClient(string apiKey);
         public ClientPipeline Pipeline { get; }
@@ -2419,6 +2538,10 @@ namespace OpenAI.Files {
         protected OpenAIFileClient();
         public OpenAIFileClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public OpenAIFileClient(ApiKeyCredential credential);
+        [Experimental("OPENAI001")]
+        public OpenAIFileClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        [Experimental("OPENAI001")]
+        public OpenAIFileClient(AuthenticationPolicy authenticationPolicy);
         protected internal OpenAIFileClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public OpenAIFileClient(string apiKey);
         public ClientPipeline Pipeline { get; }
@@ -2518,6 +2641,8 @@ namespace OpenAI.FineTuning {
         protected FineTuningClient();
         public FineTuningClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public FineTuningClient(ApiKeyCredential credential);
+        public FineTuningClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        public FineTuningClient(AuthenticationPolicy authenticationPolicy);
         protected internal FineTuningClient(ClientPipeline pipeline, OpenAIClientOptions options);
         protected internal FineTuningClient(ClientPipeline pipeline, Uri endpoint);
         public FineTuningClient(string apiKey);
@@ -2839,6 +2964,8 @@ namespace OpenAI.Graders {
         protected GraderClient();
         public GraderClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public GraderClient(ApiKeyCredential credential);
+        public GraderClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        public GraderClient(AuthenticationPolicy authenticationPolicy);
         protected internal GraderClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public GraderClient(string apiKey);
         public ClientPipeline Pipeline { get; }
@@ -3203,7 +3330,13 @@ namespace OpenAI.Images {
         protected internal ImageClient(ClientPipeline pipeline, string model, OpenAIClientOptions options);
         public ImageClient(string model, ApiKeyCredential credential, OpenAIClientOptions options);
         public ImageClient(string model, ApiKeyCredential credential);
+        [Experimental("OPENAI001")]
+        public ImageClient(string model, AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        [Experimental("OPENAI001")]
+        public ImageClient(string model, AuthenticationPolicy authenticationPolicy);
         public ImageClient(string model, string apiKey);
+        [Experimental("OPENAI001")]
+        public string Model { get; }
         public ClientPipeline Pipeline { get; }
         public virtual ClientResult<GeneratedImage> GenerateImage(string prompt, ImageGenerationOptions options = null, CancellationToken cancellationToken = default);
         public virtual Task<ClientResult<GeneratedImage>> GenerateImageAsync(string prompt, ImageGenerationOptions options = null, CancellationToken cancellationToken = default);
@@ -3347,6 +3480,10 @@ namespace OpenAI.Models {
         protected OpenAIModelClient();
         public OpenAIModelClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public OpenAIModelClient(ApiKeyCredential credential);
+        [Experimental("OPENAI001")]
+        public OpenAIModelClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        [Experimental("OPENAI001")]
+        public OpenAIModelClient(AuthenticationPolicy authenticationPolicy);
         protected internal OpenAIModelClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public OpenAIModelClient(string apiKey);
         public ClientPipeline Pipeline { get; }
@@ -3389,7 +3526,13 @@ namespace OpenAI.Moderations {
         protected internal ModerationClient(ClientPipeline pipeline, string model, OpenAIClientOptions options);
         public ModerationClient(string model, ApiKeyCredential credential, OpenAIClientOptions options);
         public ModerationClient(string model, ApiKeyCredential credential);
+        [Experimental("OPENAI001")]
+        public ModerationClient(string model, AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        [Experimental("OPENAI001")]
+        public ModerationClient(string model, AuthenticationPolicy authenticationPolicy);
         public ModerationClient(string model, string apiKey);
+        [Experimental("OPENAI001")]
+        public string Model { get; }
         public ClientPipeline Pipeline { get; }
         public virtual ClientResult ClassifyText(BinaryContent content, RequestOptions options = null);
         public virtual ClientResult<ModerationResultCollection> ClassifyText(IEnumerable<string> inputs, CancellationToken cancellationToken = default);
@@ -4539,6 +4682,8 @@ namespace OpenAI.Responses {
         protected internal OpenAIResponseClient(ClientPipeline pipeline, string model, OpenAIClientOptions options);
         public OpenAIResponseClient(string model, ApiKeyCredential credential, OpenAIClientOptions options);
         public OpenAIResponseClient(string model, ApiKeyCredential credential);
+        public OpenAIResponseClient(string model, AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        public OpenAIResponseClient(string model, AuthenticationPolicy authenticationPolicy);
         public OpenAIResponseClient(string model, string apiKey);
         public ClientPipeline Pipeline { get; }
         public virtual ClientResult CancelResponse(string responseId, RequestOptions options);
@@ -4569,6 +4714,14 @@ namespace OpenAI.Responses {
         public virtual AsyncCollectionResult GetResponseInputItemsAsync(string responseId, int? limit, string order, string after, string before, RequestOptions options = null);
         public virtual CollectionResult<StreamingResponseUpdate> GetResponseStreaming(string responseId, int? startingAfter = null, CancellationToken cancellationToken = default);
         public virtual AsyncCollectionResult<StreamingResponseUpdate> GetResponseStreamingAsync(string responseId, int? startingAfter = null, CancellationToken cancellationToken = default);
+    }
+    [Experimental("OPENAI001")]
+    public static class OpenAIResponsesModelFactory {
+        public static MessageResponseItem MessageResponseItem(string id = null, MessageRole role = MessageRole.Assistant, MessageStatus? status = null);
+        public static OpenAIResponse OpenAIResponse(string id = null, DateTimeOffset createdAt = default, ResponseStatus? status = null, ResponseError error = null, ResponseTokenUsage usage = null, string endUserId = null, ResponseReasoningOptions reasoningOptions = null, int? maxOutputTokenCount = null, ResponseTextOptions textOptions = null, ResponseTruncationMode? truncationMode = null, ResponseIncompleteStatusDetails incompleteStatusDetails = null, IEnumerable<ResponseItem> outputItems = null, bool parallelToolCallsEnabled = false, ResponseToolChoice toolChoice = null, string model = null, IDictionary<string, string> metadata = null, float? temperature = null, float? topP = null, string previousResponseId = null, bool? background = null, string instructions = null, IEnumerable<ResponseTool> tools = null);
+        public static ReasoningResponseItem ReasoningResponseItem(string id = null, string encryptedContent = null, ReasoningStatus? status = null, IEnumerable<ReasoningSummaryPart> summaryParts = null);
+        public static ReasoningResponseItem ReasoningResponseItem(string id = null, string encryptedContent = null, ReasoningStatus? status = null, string summaryText = null);
+        public static ReferenceResponseItem ReferenceResponseItem(string id = null);
     }
     [Experimental("OPENAI001")]
     public class ReasoningResponseItem : ResponseItem, IJsonModel<ReasoningResponseItem>, IPersistableModel<ReasoningResponseItem> {
@@ -5397,6 +5550,8 @@ namespace OpenAI.VectorStores {
         protected VectorStoreClient();
         public VectorStoreClient(ApiKeyCredential credential, OpenAIClientOptions options);
         public VectorStoreClient(ApiKeyCredential credential);
+        public VectorStoreClient(AuthenticationPolicy authenticationPolicy, OpenAIClientOptions options);
+        public VectorStoreClient(AuthenticationPolicy authenticationPolicy);
         protected internal VectorStoreClient(ClientPipeline pipeline, OpenAIClientOptions options);
         public VectorStoreClient(string apiKey);
         public ClientPipeline Pipeline { get; }
