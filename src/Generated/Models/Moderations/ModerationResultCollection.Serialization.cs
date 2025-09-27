@@ -3,14 +3,16 @@
 #nullable disable
 
 using System;
+using System.ClientModel;
 using System.ClientModel.Primitives;
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using OpenAI;
 
 namespace OpenAI.Moderations
 {
-    public partial class ModerationResultCollection : IJsonModel<ModerationResultCollection>
+    public partial class ModerationResultCollection : ReadOnlyCollection<ModerationResult>, IJsonModel<ModerationResultCollection>
     {
         [Experimental("OPENAI001")]
         protected virtual void JsonModelWriteCore(Utf8JsonWriter writer, ModelReaderWriterOptions options)
@@ -100,5 +102,13 @@ namespace OpenAI.Moderations
         }
 
         string IPersistableModel<ModerationResultCollection>.GetFormatFromOptions(ModelReaderWriterOptions options) => "J";
+
+        [Experimental("OPENAI001")]
+        public static explicit operator ModerationResultCollection(ClientResult result)
+        {
+            using PipelineResponse response = result.GetRawResponse();
+            using JsonDocument document = JsonDocument.Parse(response.Content);
+            return DeserializeModerationResultCollection(document.RootElement, ModelSerializationExtensions.WireOptions);
+        }
     }
 }

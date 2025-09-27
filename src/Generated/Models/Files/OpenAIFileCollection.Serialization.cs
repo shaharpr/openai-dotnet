@@ -3,14 +3,16 @@
 #nullable disable
 
 using System;
+using System.ClientModel;
 using System.ClientModel.Primitives;
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using OpenAI;
 
 namespace OpenAI.Files
 {
-    public partial class OpenAIFileCollection : IJsonModel<OpenAIFileCollection>
+    public partial class OpenAIFileCollection : ReadOnlyCollection<OpenAIFile>, IJsonModel<OpenAIFileCollection>
     {
         [Experimental("OPENAI001")]
         protected virtual void JsonModelWriteCore(Utf8JsonWriter writer, ModelReaderWriterOptions options)
@@ -110,5 +112,13 @@ namespace OpenAI.Files
         }
 
         string IPersistableModel<OpenAIFileCollection>.GetFormatFromOptions(ModelReaderWriterOptions options) => "J";
+
+        [Experimental("OPENAI001")]
+        public static explicit operator OpenAIFileCollection(ClientResult result)
+        {
+            using PipelineResponse response = result.GetRawResponse();
+            using JsonDocument document = JsonDocument.Parse(response.Content);
+            return DeserializeOpenAIFileCollection(document.RootElement, ModelSerializationExtensions.WireOptions);
+        }
     }
 }

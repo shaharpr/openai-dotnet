@@ -138,29 +138,29 @@ namespace OpenAI.Responses
                     case "response.web_search_call.searching":
                         return StreamingResponseWebSearchCallSearchingUpdate.DeserializeStreamingResponseWebSearchCallSearchingUpdate(element, options);
                     case "response.image_generation_call.completed":
-                        return InternalResponseImageGenCallCompletedEvent.DeserializeInternalResponseImageGenCallCompletedEvent(element, options);
+                        return StreamingResponseImageGenerationCallCompletedUpdate.DeserializeStreamingResponseImageGenerationCallCompletedUpdate(element, options);
                     case "response.image_generation_call.generating":
-                        return InternalResponseImageGenCallGeneratingEvent.DeserializeInternalResponseImageGenCallGeneratingEvent(element, options);
+                        return StreamingResponseImageGenerationCallGeneratingUpdate.DeserializeStreamingResponseImageGenerationCallGeneratingUpdate(element, options);
                     case "response.image_generation_call.in_progress":
-                        return InternalResponseImageGenCallInProgressEvent.DeserializeInternalResponseImageGenCallInProgressEvent(element, options);
+                        return StreamingResponseImageGenerationCallInProgressUpdate.DeserializeStreamingResponseImageGenerationCallInProgressUpdate(element, options);
                     case "response.image_generation_call.partial_image":
-                        return InternalResponseImageGenCallPartialImageEvent.DeserializeInternalResponseImageGenCallPartialImageEvent(element, options);
-                    case "response.mcp_call.arguments_delta":
-                        return InternalResponseMCPCallArgumentsDeltaEvent.DeserializeInternalResponseMCPCallArgumentsDeltaEvent(element, options);
-                    case "response.mcp_call.arguments_done":
-                        return InternalResponseMCPCallArgumentsDoneEvent.DeserializeInternalResponseMCPCallArgumentsDoneEvent(element, options);
+                        return StreamingResponseImageGenerationCallPartialImageUpdate.DeserializeStreamingResponseImageGenerationCallPartialImageUpdate(element, options);
+                    case "response.mcp_call_arguments.delta":
+                        return StreamingResponseMcpCallArgumentsDeltaUpdate.DeserializeStreamingResponseMcpCallArgumentsDeltaUpdate(element, options);
+                    case "response.mcp_call_arguments.done":
+                        return StreamingResponseMcpCallArgumentsDoneUpdate.DeserializeStreamingResponseMcpCallArgumentsDoneUpdate(element, options);
                     case "response.mcp_call.completed":
-                        return InternalResponseMCPCallCompletedEvent.DeserializeInternalResponseMCPCallCompletedEvent(element, options);
+                        return StreamingResponseMcpCallCompletedUpdate.DeserializeStreamingResponseMcpCallCompletedUpdate(element, options);
                     case "response.mcp_call.failed":
-                        return InternalResponseMCPCallFailedEvent.DeserializeInternalResponseMCPCallFailedEvent(element, options);
+                        return StreamingResponseMcpCallFailedUpdate.DeserializeStreamingResponseMcpCallFailedUpdate(element, options);
                     case "response.mcp_call.in_progress":
-                        return InternalResponseMCPCallInProgressEvent.DeserializeInternalResponseMCPCallInProgressEvent(element, options);
+                        return StreamingResponseMcpCallInProgressUpdate.DeserializeStreamingResponseMcpCallInProgressUpdate(element, options);
                     case "response.mcp_list_tools.completed":
-                        return InternalResponseMCPListToolsCompletedEvent.DeserializeInternalResponseMCPListToolsCompletedEvent(element, options);
+                        return StreamingResponseMcpListToolsCompletedUpdate.DeserializeStreamingResponseMcpListToolsCompletedUpdate(element, options);
                     case "response.mcp_list_tools.failed":
-                        return InternalResponseMCPListToolsFailedEvent.DeserializeInternalResponseMCPListToolsFailedEvent(element, options);
+                        return StreamingResponseMcpListToolsFailedUpdate.DeserializeStreamingResponseMcpListToolsFailedUpdate(element, options);
                     case "response.mcp_list_tools.in_progress":
-                        return InternalResponseMCPListToolsInProgressEvent.DeserializeInternalResponseMCPListToolsInProgressEvent(element, options);
+                        return StreamingResponseMcpListToolsInProgressUpdate.DeserializeStreamingResponseMcpListToolsInProgressUpdate(element, options);
                     case "response.output_text.annotation.added":
                         return StreamingResponseTextAnnotationAddedUpdate.DeserializeStreamingResponseTextAnnotationAddedUpdate(element, options);
                     case "response.queued":
@@ -174,15 +174,15 @@ namespace OpenAI.Responses
                     case "response.reasoning_summary.done":
                         return InternalResponseReasoningSummaryDoneEvent.DeserializeInternalResponseReasoningSummaryDoneEvent(element, options);
                     case "response.code_interpreter_call_code.delta":
-                        return InternalResponseCodeInterpreterCallCodeDeltaEvent.DeserializeInternalResponseCodeInterpreterCallCodeDeltaEvent(element, options);
+                        return StreamingResponseCodeInterpreterCallCodeDeltaUpdate.DeserializeStreamingResponseCodeInterpreterCallCodeDeltaUpdate(element, options);
                     case "response.code_interpreter_call_code.done":
-                        return InternalResponseCodeInterpreterCallCodeDoneEvent.DeserializeInternalResponseCodeInterpreterCallCodeDoneEvent(element, options);
+                        return StreamingResponseCodeInterpreterCallCodeDoneUpdate.DeserializeStreamingResponseCodeInterpreterCallCodeDoneUpdate(element, options);
                     case "response.code_interpreter_call.completed":
-                        return InternalResponseCodeInterpreterCallCompletedEvent.DeserializeInternalResponseCodeInterpreterCallCompletedEvent(element, options);
+                        return StreamingResponseCodeInterpreterCallCompletedUpdate.DeserializeStreamingResponseCodeInterpreterCallCompletedUpdate(element, options);
                     case "response.code_interpreter_call.in_progress":
-                        return InternalResponseCodeInterpreterCallInProgressEvent.DeserializeInternalResponseCodeInterpreterCallInProgressEvent(element, options);
+                        return StreamingResponseCodeInterpreterCallInProgressUpdate.DeserializeStreamingResponseCodeInterpreterCallInProgressUpdate(element, options);
                     case "response.code_interpreter_call.interpreting":
-                        return InternalResponseCodeInterpreterCallInterpretingEvent.DeserializeInternalResponseCodeInterpreterCallInterpretingEvent(element, options);
+                        return StreamingResponseCodeInterpreterCallInterpretingUpdate.DeserializeStreamingResponseCodeInterpreterCallInterpretingUpdate(element, options);
                 }
             }
             return UnknownResponseStreamEvent.DeserializeUnknownResponseStreamEvent(element, options);

@@ -9,7 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace OpenAI.FineTuning
 {
     [Experimental("OPENAI001")]
-    public partial class HyperparametersForSupervised
+    public partial class HyperparametersForSupervised : MethodHyperparameters
     {
         private protected IDictionary<string, BinaryData> _additionalBinaryDataProperties;
 
@@ -17,11 +17,11 @@ namespace OpenAI.FineTuning
         {
         }
 
-        internal HyperparametersForSupervised(BinaryData batchSize, BinaryData nEpochs, BinaryData learningRateMultiplier, IDictionary<string, BinaryData> additionalBinaryDataProperties)
+        internal HyperparametersForSupervised(BinaryData batchSize, BinaryData learningRateMultiplier, BinaryData nEpochs, IDictionary<string, BinaryData> additionalBinaryDataProperties)
         {
             _BatchSize = batchSize;
-            _NEpochs = nEpochs;
             _LearningRateMultiplier = learningRateMultiplier;
+            _NEpochs = nEpochs;
             _additionalBinaryDataProperties = additionalBinaryDataProperties;
         }
 

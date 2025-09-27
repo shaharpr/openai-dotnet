@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using NUnit.Framework;
+using OpenAI.Containers;
 using OpenAI.Files;
 using OpenAI.Responses;
 using OpenAI.Tests.Utility;
@@ -10,6 +11,7 @@ using System.ClientModel.Primitives;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using static OpenAI.Tests.TestHelpers;
@@ -66,62 +68,9 @@ public partial class ResponsesTests : SyncAsyncTestBase
         {
             FileIdsToDelete.Add(file.Id);
         }
-        if (input is CreateVectorStoreOperation operation)
+        if (input is VectorStore vectorStore)
         {
-            VectorStoreIdsToDelete.Add(operation.VectorStoreId);
-        }
-    }
-
-    [Test]
-    public async Task FileSearch()
-    {
-        OpenAIFileClient fileClient = GetTestClient<OpenAIFileClient>(TestScenario.Files);
-        OpenAIFile testFile = await fileClient.UploadFileAsync(
-            BinaryData.FromString("""
-                    Travis's favorite food is pizza.
-                    """),
-            "test_favorite_foods.txt",
-            FileUploadPurpose.UserData);
-        Validate(testFile);
-
-        VectorStoreClient vscClient = GetTestClient<VectorStoreClient>(TestScenario.VectorStores);
-        CreateVectorStoreOperation createStoreOp = await vscClient.CreateVectorStoreAsync(
-            waitUntilCompleted: true,
-            new VectorStoreCreationOptions()
-            {
-                FileIds = { testFile.Id },
-            });
-        Validate(createStoreOp);
-
-        OpenAIResponseClient client = GetTestClient();
-
-        OpenAIResponse response = await client.CreateResponseAsync(
-            "Using the file search tool, what's Travis's favorite food?",
-            new ResponseCreationOptions()
-            {
-                Tools =
-                {
-                    ResponseTool.CreateFileSearchTool([createStoreOp.VectorStoreId], null),
-                }
-            });
-        Assert.That(response.OutputItems?.Count, Is.EqualTo(2));
-        FileSearchCallResponseItem fileSearchCall = response.OutputItems[0] as FileSearchCallResponseItem;
-        Assert.That(fileSearchCall, Is.Not.Null);
-        Assert.That(fileSearchCall?.Status, Is.EqualTo(FileSearchCallStatus.Completed));
-        Assert.That(fileSearchCall?.Queries, Has.Count.GreaterThan(0));
-        MessageResponseItem message = response.OutputItems[1] as MessageResponseItem;
-        Assert.That(message, Is.Not.Null);
-        ResponseContentPart messageContentPart = message.Content?.FirstOrDefault();
-        Assert.That(messageContentPart, Is.Not.Null);
-        Assert.That(messageContentPart.Text, Does.Contain("pizza"));
-        Assert.That(messageContentPart.OutputTextAnnotations, Is.Not.Null.And.Not.Empty);
-        Assert.That(messageContentPart.OutputTextAnnotations[0].FileCitationFileId, Is.EqualTo(testFile.Id));
-        Assert.That(messageContentPart.OutputTextAnnotations[0].FileCitationIndex, Is.GreaterThan(0));
-
-
-        await foreach (ResponseItem inputItem in client.GetResponseInputItemsAsync(response.Id))
-        {
-            Console.WriteLine(ModelReaderWriter.Write(inputItem).ToString());
+            VectorStoreIdsToDelete.Add(vectorStore.Id);
         }
     }
 
@@ -155,9 +104,7 @@ public partial class ResponsesTests : SyncAsyncTestBase
                     BinaryData screenshotBytes = BinaryData.FromBytes(File.ReadAllBytes(screenshotPath));
                     ResponseItem screenshotReply = ResponseItem.CreateComputerCallOutputItem(
                         computerCall.CallId,
-                        [],
-                        screenshotBytes,
-                        "image/png");
+                        ComputerCallOutput.CreateScreenshotOutput(screenshotBytes, "image/png"));
 
                     responseOptions.PreviousResponseId = response.Id;
                     response = await client.CreateResponseAsync([screenshotReply], responseOptions);
@@ -227,8 +174,8 @@ public partial class ResponsesTests : SyncAsyncTestBase
             Tools =
             {
                 ResponseTool.CreateWebSearchTool(
-                    WebSearchUserLocation.CreateApproximateLocation(city: "San Francisco"),
-                    WebSearchContextSize.Low)
+                    userLocation: WebSearchToolLocation.CreateApproximateLocation(city: "San Francisco"),
+                    searchContextSize: WebSearchToolContextSize.Low)
             }
         };
 
@@ -284,6 +231,236 @@ public partial class ResponsesTests : SyncAsyncTestBase
     }
 
     [Test]
+    public async Task ResponseWithImageGenTool()
+    {
+        OpenAIResponseClient client = GetTestClient();
+
+        ResponseCreationOptions options = new()
+        {
+            Tools =
+            {
+                ResponseTool.CreateImageGenerationTool(
+                    model: "gpt-image-1",
+                    quality: ImageGenerationToolQuality.High,
+                    size: ImageGenerationToolSize.W1024xH1024,
+                    outputFileFormat: ImageGenerationToolOutputFileFormat.Png,
+                    moderationLevel: ImageGenerationToolModerationLevel.Auto,
+                    background: ImageGenerationToolBackground.Transparent,
+                    inputFidelityLevel: ImageGenerationToolInputFidelityLevel.High)
+            }
+        };
+
+        OpenAIResponse response = await client.CreateResponseAsync(
+            "Generate an image of gray tabby cat hugging an otter with an orange scarf",
+            options);
+
+        Assert.That(response.OutputItems, Has.Count.EqualTo(2));
+        Assert.That(response.OutputItems[0], Is.InstanceOf<ImageGenerationCallResponseItem>());
+        Assert.That(response.OutputItems[1], Is.InstanceOf<MessageResponseItem>());
+
+        MessageResponseItem message = (MessageResponseItem)response.OutputItems[1];
+        Assert.That(message.Content, Has.Count.GreaterThan(0));
+        Assert.That(message.Content[0].Kind, Is.EqualTo(ResponseContentPartKind.OutputText));
+
+        Assert.That(response.Tools.FirstOrDefault(), Is.TypeOf<ImageGenerationTool>());
+
+        ImageGenerationCallResponseItem imageGenResponse = (ImageGenerationCallResponseItem)response.OutputItems[0];
+        Assert.AreEqual(imageGenResponse.Status, ImageGenerationCallStatus.Completed);
+        Assert.That(imageGenResponse.GeneratedImageBytes.ToArray(), Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
+    public async Task ImageGenToolStreaming()
+    {
+        OpenAIResponseClient client = GetTestClient();
+
+        const string message = "Draw a gorgeous image of a river made of white owl feathers, snaking its way through a serene winter landscape";
+
+        ResponseCreationOptions responseOptions = new()
+        {
+            Tools =
+            {
+                ResponseTool.CreateImageGenerationTool(
+                    model: "gpt-image-1",
+                    quality: ImageGenerationToolQuality.High,
+                    size: ImageGenerationToolSize.W1024xH1024,
+                    outputFileFormat: ImageGenerationToolOutputFileFormat.Png,
+                    moderationLevel: ImageGenerationToolModerationLevel.Auto,
+                    background: ImageGenerationToolBackground.Transparent)
+            }
+        };
+
+        string imageGenItemId = null;
+        int partialCount = 0;
+        int inProgressCount = 0;
+        int generateCount = 0;
+        bool gotCompletedImageGenItem = false;
+
+        await foreach (StreamingResponseUpdate update
+            in client.CreateResponseStreamingAsync(message, responseOptions))
+        {
+            if (update is StreamingResponseImageGenerationCallPartialImageUpdate imageGenCallInPartialUpdate)
+            {
+                Assert.That(imageGenCallInPartialUpdate.ItemId, Is.Not.Null.And.Not.Empty);
+                imageGenItemId ??= imageGenCallInPartialUpdate.ItemId;
+                Assert.That(imageGenItemId, Is.EqualTo(imageGenCallInPartialUpdate.ItemId));
+                Assert.That(imageGenCallInPartialUpdate.OutputIndex, Is.EqualTo(0));
+                partialCount++;
+            }
+            else if (update is StreamingResponseImageGenerationCallInProgressUpdate imageGenCallInProgressUpdate)
+            {
+                Assert.That(imageGenCallInProgressUpdate.ItemId, Is.Not.Null.And.Not.Empty);
+                imageGenItemId ??= imageGenCallInProgressUpdate.ItemId;
+                Assert.That(imageGenItemId, Is.EqualTo(imageGenCallInProgressUpdate.ItemId));
+                Assert.That(imageGenCallInProgressUpdate.OutputIndex, Is.EqualTo(0));
+                inProgressCount++;
+            }
+            else if (update is StreamingResponseImageGenerationCallGeneratingUpdate imageGenCallGeneratingUpdate)
+            {
+                Assert.That(imageGenCallGeneratingUpdate.ItemId, Is.Not.Null.And.Not.Empty);
+                imageGenItemId ??= imageGenCallGeneratingUpdate.ItemId;
+                Assert.That(imageGenItemId, Is.EqualTo(imageGenCallGeneratingUpdate.ItemId));
+                Assert.That(imageGenCallGeneratingUpdate.OutputIndex, Is.EqualTo(0));
+                generateCount++;
+            }
+            else if (update is StreamingResponseImageGenerationCallCompletedUpdate outputItemCompleteUpdate)
+            {
+                Assert.That(outputItemCompleteUpdate.ItemId, Is.Not.Null.And.Not.Empty);
+                imageGenItemId ??= outputItemCompleteUpdate.ItemId;
+                Assert.That(imageGenItemId, Is.EqualTo(outputItemCompleteUpdate.ItemId));
+                Assert.That(outputItemCompleteUpdate.OutputIndex, Is.EqualTo(0));
+                gotCompletedImageGenItem = true;
+            }
+        }
+
+        Assert.That(gotCompletedImageGenItem, Is.True);
+        Assert.That(partialCount, Is.EqualTo(1));
+        Assert.That(inProgressCount, Is.EqualTo(1));
+        Assert.That(generateCount, Is.EqualTo(1));
+        Assert.That(imageGenItemId, Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
+    public async Task ImageGenToolInputMaskWithImageBytes()
+    {
+        OpenAIResponseClient client = GetTestClient();
+
+        string imageFilename = "images_dog_and_cat.png";
+        string imagePath = Path.Combine("Assets", imageFilename);
+        ResponseCreationOptions options = new()
+        {
+            Tools =
+            {
+            ResponseTool.CreateImageGenerationTool(
+                model: "gpt-image-1",
+                outputFileFormat: ImageGenerationToolOutputFileFormat.Png,
+                inputImageMask: new(BinaryData.FromBytes(File.ReadAllBytes(imagePath)), "image/png"))
+            }
+        };
+
+        OpenAIResponse response = await client.CreateResponseAsync(
+            "Generate an image of gray tabby cat hugging an otter with an orange scarf",
+            options);
+
+        Assert.That(response.OutputItems, Has.Count.EqualTo(2));
+        Assert.That(response.OutputItems[0], Is.InstanceOf<ImageGenerationCallResponseItem>());
+        Assert.That(response.OutputItems[1], Is.InstanceOf<MessageResponseItem>());
+
+        MessageResponseItem message = (MessageResponseItem)response.OutputItems[1];
+        Assert.That(message.Content, Has.Count.GreaterThan(0));
+        Assert.That(message.Content[0].Kind, Is.EqualTo(ResponseContentPartKind.OutputText));
+
+        Assert.That(response.Tools.FirstOrDefault(), Is.TypeOf<ImageGenerationTool>());
+
+        ImageGenerationCallResponseItem imageGenResponse = (ImageGenerationCallResponseItem)response.OutputItems[0];
+        Assert.AreEqual(imageGenResponse.Status, ImageGenerationCallStatus.Completed);
+        Assert.That(imageGenResponse.GeneratedImageBytes.ToArray(), Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
+    public async Task ImageGenToolInputMaskWithImageUri()
+    {
+        OpenAIResponseClient client = GetTestClient();
+
+        ResponseCreationOptions options = new()
+        {
+            Tools =
+            {
+            ResponseTool.CreateImageGenerationTool(
+                model: "gpt-image-1",
+                outputFileFormat: ImageGenerationToolOutputFileFormat.Png,
+                inputImageMask: new(imageUri: new Uri("https://upload.wikimedia.org/wikipedia/commons/c/c3/Openai.png")))
+            }
+        };
+
+        OpenAIResponse response = await client.CreateResponseAsync(
+            "Generate an image of gray tabby cat hugging an otter with an orange scarf",
+            options);
+
+        Assert.That(response.OutputItems, Has.Count.EqualTo(2));
+        Assert.That(response.OutputItems[0], Is.InstanceOf<ImageGenerationCallResponseItem>());
+        Assert.That(response.OutputItems[1], Is.InstanceOf<MessageResponseItem>());
+
+        MessageResponseItem message = (MessageResponseItem)response.OutputItems[1];
+        Assert.That(message.Content, Has.Count.GreaterThan(0));
+        Assert.That(message.Content[0].Kind, Is.EqualTo(ResponseContentPartKind.OutputText));
+
+        Assert.That(response.Tools.FirstOrDefault(), Is.TypeOf<ImageGenerationTool>());
+
+        ImageGenerationCallResponseItem imageGenResponse = (ImageGenerationCallResponseItem)response.OutputItems[0];
+        Assert.AreEqual(imageGenResponse.Status, ImageGenerationCallStatus.Completed);
+        Assert.That(imageGenResponse.GeneratedImageBytes.ToArray(), Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
+    public async Task ImageGenToolInputMaskWithFileId()
+    {
+        OpenAIResponseClient client = GetTestClient();
+
+        OpenAIFileClient fileClient = GetTestClient<OpenAIFileClient>(TestScenario.Files);
+
+        string imageFilename = "images_dog_and_cat.png";
+        string imagePath = Path.Combine("Assets", imageFilename);
+        using Stream image = File.OpenRead(imagePath);
+        BinaryData imageData = BinaryData.FromStream(image);
+
+        OpenAIFile file = await fileClient.UploadFileAsync(
+            imageData,
+            imageFilename,
+            FileUploadPurpose.UserData);
+        Validate(file);
+
+        ResponseCreationOptions options = new()
+        {
+            Tools =
+            {
+            ResponseTool.CreateImageGenerationTool(
+                model: "gpt-image-1",
+                outputFileFormat: ImageGenerationToolOutputFileFormat.Png,
+                inputImageMask: new(fileId: file.Id))
+            }
+        };
+
+        OpenAIResponse response = await client.CreateResponseAsync(
+            "Generate an image of gray tabby cat hugging an otter with an orange scarf",
+            options);
+
+        Assert.That(response.OutputItems, Has.Count.EqualTo(2));
+        Assert.That(response.OutputItems[0], Is.InstanceOf<ImageGenerationCallResponseItem>());
+        Assert.That(response.OutputItems[1], Is.InstanceOf<MessageResponseItem>());
+
+        MessageResponseItem message = (MessageResponseItem)response.OutputItems[1];
+        Assert.That(message.Content, Has.Count.GreaterThan(0));
+        Assert.That(message.Content[0].Kind, Is.EqualTo(ResponseContentPartKind.OutputText));
+
+        Assert.That(response.Tools.FirstOrDefault(), Is.TypeOf<ImageGenerationTool>());
+
+        ImageGenerationCallResponseItem imageGenResponse = (ImageGenerationCallResponseItem)response.OutputItems[0];
+        Assert.AreEqual(imageGenResponse.Status, ImageGenerationCallStatus.Completed);
+        Assert.That(imageGenResponse.GeneratedImageBytes.ToArray(), Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
     public async Task StreamingResponses()
     {
         OpenAIResponseClient client = GetTestClient("gpt-4o-mini"); // "computer-use-alpha");
@@ -306,7 +483,7 @@ public partial class ResponsesTests : SyncAsyncTestBase
         }
         Assert.That(deltaTextSegments, Has.Count.GreaterThan(0));
         Assert.That(finalResponseText, Is.Not.Null.And.Not.Empty);
-        Assert.That(string.Join(string.Empty, deltaTextSegments), Is.EqualTo(finalResponseText));
+        Assert.That(string.Concat(deltaTextSegments), Is.EqualTo(finalResponseText));
     }
 
     [Test]
@@ -334,7 +511,7 @@ public partial class ResponsesTests : SyncAsyncTestBase
                           }
                         }
                         """),
-                    functionSchemaIsStrict: false),
+                    strictModeEnabled: false),
             },
             TruncationMode = ResponseTruncationMode.Auto,
         };
@@ -460,6 +637,24 @@ public partial class ResponsesTests : SyncAsyncTestBase
     }
 
     [Test]
+    public async Task ResponseServiceTierWorks()
+    {
+        OpenAIResponseClient client = GetTestClient();
+
+        MessageResponseItem message = ResponseItem.CreateUserMessageItem("Using a comprehensive evaluation of popular media in the 1970s and 1980s, what were the most common sci-fi themes?");
+        ResponseCreationOptions options = new()
+        {
+            ServiceTier = ResponseServiceTier.Default,
+        };
+        OpenAIResponse response = IsAsync
+            ? await client.CreateResponseAsync([message], options)
+            : client.CreateResponse([message], options);
+
+        Assert.That(response, Is.Not.Null);
+        Assert.That(response.ServiceTier, Is.EqualTo(ResponseServiceTier.Default));
+    }
+
+    [Test]
     public async Task OutputTextMethod()
     {
         OpenAIResponseClient client = GetTestClient();
@@ -475,7 +670,14 @@ public partial class ResponsesTests : SyncAsyncTestBase
             "How's the weather?",
             new ResponseCreationOptions()
             {
-                Tools = { ResponseTool.CreateFunctionTool("get_weather", "gets the weather", BinaryData.FromString("{}")) },
+                Tools =
+                {
+                    ResponseTool.CreateFunctionTool(
+                        functionName: "get_weather",
+                        functionDescription: "gets the weather",
+                        functionParameters: BinaryData.FromString("{}"),
+                        strictModeEnabled: false)
+                },
                 ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
             });
         Assert.That(response.GetOutputText(), Is.Null);
@@ -530,7 +732,7 @@ public partial class ResponsesTests : SyncAsyncTestBase
             BinaryData.FromBytes(File.ReadAllBytes(filePath)),
             "test_favorite_foods.pdf",
             FileUploadPurpose.UserData);
-                Validate(newFileToUse);
+        Validate(newFileToUse);
 
         ResponseItem messageItem = ResponseItem.CreateUserMessageItem(
             [
@@ -707,7 +909,7 @@ public partial class ResponsesTests : SyncAsyncTestBase
     }
 
     [Test]
-    public async Task FunctionCall()
+    public async Task FunctionCallWorks()
     {
         OpenAIResponseClient client = GetTestClient();
 
@@ -755,6 +957,56 @@ public partial class ResponsesTests : SyncAsyncTestBase
     }
 
     [Test]
+    public async Task FunctionCallStreamingWorks()
+    {
+        OpenAIResponseClient client = GetTestClient();
+
+        ResponseCreationOptions options = new()
+        {
+            Tools = { s_GetWeatherAtLocationTool }
+        };
+
+        AsyncCollectionResult<StreamingResponseUpdate> responseUpdates = client.CreateResponseStreamingAsync(
+            "What should I wear for the weather in San Francisco right now?",
+            options);
+
+        int functionCallArgumentsDeltaUpdateCount = 0;
+        int functionCallArgumentsDoneUpdateCount = 0;
+
+        StringBuilder argumentsBuilder = new StringBuilder();
+
+        await foreach (StreamingResponseUpdate update in responseUpdates)
+        {
+            if (update is StreamingResponseFunctionCallArgumentsDeltaUpdate functionCallArgumentsDeltaUpdate)
+            {
+                functionCallArgumentsDeltaUpdateCount++;
+
+                BinaryData delta = functionCallArgumentsDeltaUpdate.Delta;
+                Assert.That(delta, Is.Not.Null);
+
+                if (!delta.ToMemory().IsEmpty)
+                {
+                    argumentsBuilder.AppendLine(functionCallArgumentsDeltaUpdate.Delta.ToString());
+                }
+            }
+
+            if (update is StreamingResponseFunctionCallArgumentsDoneUpdate functionCallArgumentsDoneUpdate)
+            {
+                functionCallArgumentsDoneUpdateCount++;
+
+                BinaryData functionArguments = functionCallArgumentsDoneUpdate.FunctionArguments;
+                Assert.That(functionArguments, Is.Not.Null);
+                Assert.That(functionArguments.ToString(), Is.EqualTo(argumentsBuilder.ToString().ReplaceLineEndings(string.Empty)));
+
+                argumentsBuilder.Clear();
+            }
+        }
+
+        Assert.That(functionCallArgumentsDoneUpdateCount, Is.GreaterThan(0));
+        Assert.That(functionCallArgumentsDeltaUpdateCount, Is.GreaterThanOrEqualTo(functionCallArgumentsDoneUpdateCount));
+    }
+
+    [Test]
     public async Task MaxTokens()
     {
         OpenAIResponseClient client = GetTestClient();
@@ -772,25 +1024,6 @@ public partial class ResponsesTests : SyncAsyncTestBase
         MessageResponseItem message = response?.OutputItems?.FirstOrDefault() as MessageResponseItem; ;
         Assert.That(message?.Content?.FirstOrDefault(), Is.Not.Null);
         Assert.That(message?.Status, Is.EqualTo(MessageStatus.Incomplete));
-    }
-
-    [Test]
-    public async Task FunctionCallStreaming()
-    {
-        OpenAIResponseClient client = GetTestClient();
-
-        await foreach (StreamingResponseUpdate update
-            in client.CreateResponseStreamingAsync(
-                "What should I wear for the weather in San Francisco right now?",
-                new ResponseCreationOptions() { Tools = { s_GetWeatherAtLocationTool } }))
-        {
-            if (update is StreamingResponseCreatedUpdate responseCreatedUpdate)
-            {
-            }
-            else if (update is StreamingResponseFunctionCallArgumentsDeltaUpdate functionCallArgumentsDeltaUpdate)
-            {
-            }
-        }
     }
 
     [Test]
@@ -821,47 +1054,64 @@ public partial class ResponsesTests : SyncAsyncTestBase
     }
 
     [Test]
-    public async Task CanUseStreamingBackgroundResponses()
+    public async Task CanStreamBackgroundResponses()
     {
         OpenAIResponseClient client = GetTestClient("gpt-4.1-mini");
 
-        string queuedResponseId = null;
+        ResponseCreationOptions options = new()
+        {
+            BackgroundModeEnabled = true,
+        };
 
-        await foreach (StreamingResponseUpdate update
-            in client.CreateResponseStreamingAsync(
-                "Hello, model!",
-                new ResponseCreationOptions()
-                {
-                    Background = true,
-                }))
+        AsyncCollectionResult<StreamingResponseUpdate> updates = client.CreateResponseStreamingAsync("Hello, model!", options);
+
+        string queuedResponseId = null;
+        int lastSequenceNumber = 0;
+
+        await foreach (StreamingResponseUpdate update in updates)
         {
             if (update is StreamingResponseQueuedUpdate queuedUpdate)
             {
+                // Confirm that the response has been queued and break.
                 queuedResponseId = queuedUpdate.Response.Id;
+                lastSequenceNumber = queuedUpdate.SequenceNumber;
                 break;
             }
         }
 
         Assert.That(queuedResponseId, Is.Not.Null.And.Not.Empty);
+        Assert.That(lastSequenceNumber, Is.GreaterThan(0));
 
+        // Try getting the response without streaming it.
         OpenAIResponse retrievedResponse = await client.GetResponseAsync(queuedResponseId);
-        Assert.That(retrievedResponse?.Id, Is.EqualTo(queuedResponseId));
 
-        OpenAIResponse finalStreamedResponse = null;
+        Assert.That(retrievedResponse, Is.Not.Null);
+        Assert.That(retrievedResponse.Id, Is.EqualTo(queuedResponseId));
+        Assert.That(retrievedResponse.BackgroundModeEnabled, Is.True);
+        Assert.That(retrievedResponse.Status, Is.EqualTo(ResponseStatus.Queued));
 
-        await foreach (StreamingResponseUpdate update
-            in client.GetResponseStreamingAsync(queuedResponseId, startingAfter: 2))
+        // Now try continuing the stream.
+        AsyncCollectionResult<StreamingResponseUpdate> continuedUpdates = client.GetResponseStreamingAsync(queuedResponseId, startingAfter: lastSequenceNumber);
+
+        OpenAIResponse completedResponse = null;
+        int? firstContinuedSequenceNumber = null;
+
+        await foreach (StreamingResponseUpdate update in continuedUpdates)
         {
-            Assert.That(update.SequenceNumber, Is.GreaterThan(2));
+            if (firstContinuedSequenceNumber is null)
+            {
+                firstContinuedSequenceNumber = update.SequenceNumber;
+            }
 
             if (update is StreamingResponseCompletedUpdate completedUpdate)
             {
-                finalStreamedResponse = completedUpdate.Response;
+                completedResponse = completedUpdate.Response;
             }
         }
 
-        Assert.That(finalStreamedResponse?.Id, Is.EqualTo(queuedResponseId));
-        Assert.That(finalStreamedResponse?.OutputItems?.FirstOrDefault(), Is.Not.Null);
+        Assert.That(firstContinuedSequenceNumber, Is.EqualTo(lastSequenceNumber + 1));
+        Assert.That(completedResponse?.Id, Is.EqualTo(queuedResponseId));
+        Assert.That(completedResponse?.OutputItems?.FirstOrDefault(), Is.Not.Null);
     }
 
     [Test]
@@ -869,14 +1119,17 @@ public partial class ResponsesTests : SyncAsyncTestBase
     {
         OpenAIResponseClient client = GetTestClient("gpt-4.1-mini");
 
-        OpenAIResponse response = await client.CreateResponseAsync(
-            "Hello, model!",
-            new ResponseCreationOptions()
-            {
-                Background = true,
-            });
-        Assert.That(response?.Id, Is.Not.Null.And.Not.Empty);
-        Assert.That(response?.Status, Is.EqualTo(ResponseStatus.Queued));
+        ResponseCreationOptions options = new()
+        {
+            BackgroundModeEnabled = true,
+        };
+
+        OpenAIResponse response = await client.CreateResponseAsync("Hello, model!", options);
+
+        Assert.That(response, Is.Not.Null);
+        Assert.That(response.Id, Is.Not.Null.And.Not.Empty);
+        Assert.That(response.BackgroundModeEnabled, Is.True);
+        Assert.That(response.Status, Is.EqualTo(ResponseStatus.Queued));
 
         OpenAIResponse cancelledResponse = await client.CancelResponseAsync(response.Id);
         Assert.That(cancelledResponse.Id, Is.EqualTo(response.Id));
@@ -885,24 +1138,24 @@ public partial class ResponsesTests : SyncAsyncTestBase
 
     private static readonly string s_GetWeatherAtLocationToolName = "get_weather_at_location";
     private static readonly ResponseTool s_GetWeatherAtLocationTool = ResponseTool.CreateFunctionTool(
-            s_GetWeatherAtLocationToolName,
-            "Gets the weather at a specified location, optionally specifying units for temperature",
-            BinaryData.FromString("""
-                {
-                    "type": "object",
-                    "properties": {
-                    "location": {
-                        "type": "string"
-                    },
-                    "unit": {
-                        "type": "string",
-                        "enum": ["C", "F", "K"]
-                    }
-                    },
-                    "required": ["location"]
+        functionName: s_GetWeatherAtLocationToolName,
+        functionDescription: "Gets the weather at a specified location, optionally specifying units for temperature",
+        functionParameters: BinaryData.FromString("""
+            {
+                "type": "object",
+                "properties": {
+                "location": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["C", "F", "K"]
                 }
-                """),
-            false);
+                },
+                "required": ["location"]
+            }
+            """),
+        strictModeEnabled: false);
 
     private static OpenAIResponseClient GetTestClient(string overrideModel = null) => GetTestClient<OpenAIResponseClient>(TestScenario.Responses, overrideModel);
 }
