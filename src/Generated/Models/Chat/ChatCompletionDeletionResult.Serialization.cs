@@ -136,7 +136,7 @@ namespace OpenAI.Chat
             switch (format)
             {
                 case "J":
-                    using (JsonDocument document = JsonDocument.Parse(data))
+                    using (JsonDocument document = JsonDocument.Parse(data, ModelSerializationExtensions.JsonDocumentOptions))
                     {
                         return DeserializeChatCompletionDeletionResult(document.RootElement, options);
                     }
@@ -149,8 +149,8 @@ namespace OpenAI.Chat
 
         public static explicit operator ChatCompletionDeletionResult(ClientResult result)
         {
-            using PipelineResponse response = result.GetRawResponse();
-            using JsonDocument document = JsonDocument.Parse(response.Content);
+            PipelineResponse response = result.GetRawResponse();
+            using JsonDocument document = JsonDocument.Parse(response.Content, ModelSerializationExtensions.JsonDocumentOptions);
             return DeserializeChatCompletionDeletionResult(document.RootElement, ModelSerializationExtensions.WireOptions);
         }
     }

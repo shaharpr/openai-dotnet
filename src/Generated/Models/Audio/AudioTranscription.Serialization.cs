@@ -45,7 +45,7 @@ namespace OpenAI.Audio
             if (_additionalBinaryDataProperties?.ContainsKey("duration") != true)
             {
                 writer.WritePropertyName("duration"u8);
-                writer.WriteNumberValue(Convert.ToDouble(Duration.Value.ToString("s\\.FFF")));
+                writer.WriteNumberValue(Duration.Value.TotalSeconds);
             }
             if (_additionalBinaryDataProperties?.ContainsKey("text") != true)
             {
@@ -236,7 +236,7 @@ namespace OpenAI.Audio
             switch (format)
             {
                 case "J":
-                    using (JsonDocument document = JsonDocument.Parse(data))
+                    using (JsonDocument document = JsonDocument.Parse(data, ModelSerializationExtensions.JsonDocumentOptions))
                     {
                         return DeserializeAudioTranscription(document.RootElement, options);
                     }
