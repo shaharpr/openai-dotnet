@@ -102,7 +102,7 @@ namespace OpenAI.Files
             switch (format)
             {
                 case "J":
-                    using (JsonDocument document = JsonDocument.Parse(data))
+                    using (JsonDocument document = JsonDocument.Parse(data, ModelSerializationExtensions.JsonDocumentOptions))
                     {
                         return DeserializeOpenAIFileCollection(document.RootElement, options);
                     }
@@ -116,8 +116,8 @@ namespace OpenAI.Files
         [Experimental("OPENAI001")]
         public static explicit operator OpenAIFileCollection(ClientResult result)
         {
-            using PipelineResponse response = result.GetRawResponse();
-            using JsonDocument document = JsonDocument.Parse(response.Content);
+            PipelineResponse response = result.GetRawResponse();
+            using JsonDocument document = JsonDocument.Parse(response.Content, ModelSerializationExtensions.JsonDocumentOptions);
             return DeserializeOpenAIFileCollection(document.RootElement, ModelSerializationExtensions.WireOptions);
         }
     }

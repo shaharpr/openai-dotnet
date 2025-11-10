@@ -3,6 +3,7 @@
 #nullable disable
 
 using System;
+using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -138,7 +139,7 @@ namespace OpenAI.Audio
             switch (format)
             {
                 case "J":
-                    using (JsonDocument document = JsonDocument.Parse(data))
+                    using (JsonDocument document = JsonDocument.Parse(data, ModelSerializationExtensions.JsonDocumentOptions))
                     {
                         return DeserializeInternalCreateTranscriptionResponseJson(document.RootElement, options);
                     }
@@ -148,5 +149,12 @@ namespace OpenAI.Audio
         }
 
         string IPersistableModel<InternalCreateTranscriptionResponseJson>.GetFormatFromOptions(ModelReaderWriterOptions options) => "J";
+
+        public static explicit operator InternalCreateTranscriptionResponseJson(ClientResult result)
+        {
+            PipelineResponse response = result.GetRawResponse();
+            using JsonDocument document = JsonDocument.Parse(response.Content, ModelSerializationExtensions.JsonDocumentOptions);
+            return DeserializeInternalCreateTranscriptionResponseJson(document.RootElement, ModelSerializationExtensions.WireOptions);
+        }
     }
 }

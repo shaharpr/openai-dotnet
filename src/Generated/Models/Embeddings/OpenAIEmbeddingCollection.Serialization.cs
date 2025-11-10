@@ -97,7 +97,7 @@ namespace OpenAI.Embeddings
             switch (format)
             {
                 case "J":
-                    using (JsonDocument document = JsonDocument.Parse(data))
+                    using (JsonDocument document = JsonDocument.Parse(data, ModelSerializationExtensions.JsonDocumentOptions))
                     {
                         return DeserializeOpenAIEmbeddingCollection(document.RootElement, options);
                     }
@@ -111,8 +111,8 @@ namespace OpenAI.Embeddings
         [Experimental("OPENAI001")]
         public static explicit operator OpenAIEmbeddingCollection(ClientResult result)
         {
-            using PipelineResponse response = result.GetRawResponse();
-            using JsonDocument document = JsonDocument.Parse(response.Content);
+            PipelineResponse response = result.GetRawResponse();
+            using JsonDocument document = JsonDocument.Parse(response.Content, ModelSerializationExtensions.JsonDocumentOptions);
             return DeserializeOpenAIEmbeddingCollection(document.RootElement, ModelSerializationExtensions.WireOptions);
         }
     }
